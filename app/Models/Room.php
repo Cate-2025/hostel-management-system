@@ -2,44 +2,47 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Room extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'room_number',
-        'capacity',
-        'available_beds',
-        'floor',
-        'type',
-        'status',
-        'maintenance_notes',
+        'room_number', 'capacity', 'status', 'floor', 'price_per_month', 'description'
     ];
-
+    
     protected $casts = [
-        'status' => 'string',
-        'type' => 'string',
+        'capacity' => 'integer',
+        'price_per_month' => 'decimal:2'
     ];
-
-    /**
-     * Get students allocated to this room.
-     */
-    public function students()
+    
+    // Relationship with allocations
+    public function allocations(): HasMany
     {
-        return $this->belongsToMany(Student::class, 'room_allocations')
-            ->withPivot('allocation_date', 'release_date')
-            ->withTimestamps();
+        return $this->hasMany(Allocation::class);
     }
-
-    /**
-     * Scope to get available rooms.
-     */
-    public function scopeAvailable($query)
+    
+    // Get active allocations count using relationship
+    public function activeAllocations()
     {
-        return $query->where('status', 'available')
-            ->where('available_beds', '>', 0);
+        return $this->allocations()->where('status', 'active');
+    }
+    
+    // Get occupancy count
+    public function getOccupancyCountAttribute()
+    {
+        return $this->activeAllocations()->count();
+    }
+    
+    // Get available beds
+    public function getAvailableBedsAttribute()
+    {
+        return $this->capacity - $this->getOccupancyCountAttribute();
+    }
+    
+    // Check if room is full
+    public function isFull()
+    {
+        return $this->getAvailableBedsAttribute() <= 0;
     }
 }

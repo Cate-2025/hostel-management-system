@@ -2,78 +2,65 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Student;
 use Illuminate\Http\Request;
 
 class StudentController extends Controller
 {
-    /**
-     * Show the student dashboard.
-     */
-    public function dashboard()
+    public function index()
     {
-        $student = auth()->user()->student;
-        $room = $student->room()->latest('room_allocations.allocation_date')->first();
-        $payments = $student->payments()->latest('due_date')->paginate(10);
-
-        return view('student.dashboard', [
-            'student' => $student,
-            'room' => $room,
-            'payments' => $payments,
+        $students = Student::latest()->paginate(15);
+        return view('students.index', compact('students'));
+    }
+    
+    public function create()
+    {
+        return view('students.create');
+    }
+    
+    public function store(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:students',
+            'student_id' => 'required|unique:students',
+            'phone' => 'nullable|string',
+            'course' => 'nullable|string',
+            'year' => 'nullable|string'
         ]);
+        
+        Student::create($request->all());
+        
+        return redirect()->route('students.index')
+            ->with('success', 'Student added successfully!');
     }
-
-    /**
-     * Show student profile.
-     */
-    public function profile()
+    
+    public function edit(Student $student)
     {
-        $student = auth()->user()->student;
-        return view('student.profile', ['student' => $student]);
+        return view('students.edit', compact('student'));
     }
-
-    /**
-     * Update student profile.
-     */
-    public function updateProfile(Request $request)
+    
+    public function update(Request $request, Student $student)
     {
-        $validated = $request->validate([
-            'contact_number' => 'required|string',
-            'parent_contact' => 'nullable|string',
-            'address' => 'nullable|string',
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:students,email,' . $student->id,
+            'student_id' => 'required|unique:students,student_id,' . $student->id,
+            'phone' => 'nullable|string',
+            'course' => 'nullable|string',
+            'year' => 'nullable|string'
         ]);
-
-        auth()->user()->student->update($validated);
-
-        return redirect()->back()->with('success', 'Profile updated successfully');
+        
+        $student->update($request->all());
+        
+        return redirect()->route('students.index')
+            ->with('success', 'Student updated successfully!');
     }
-
-    /**
-     * Show room allocation details.
-     */
-    public function roomDetails()
+    
+    public function destroy(Student $student)
     {
-        $student = auth()->user()->student;
-        $room = $student->room()->latest('room_allocations.allocation_date')->first();
-
-        if (!$room) {
-            return redirect()->back()->with('error', 'No room allocated');
-        }
-
-        return view('student.room', ['room' => $room]);
-    }
-
-    /**
-     * Show payment history.
-     */
-    public function payments()
-    {
-        $student = auth()->user()->student;
-        $payments = $student->payments()->latest('due_date')->paginate(15);
-        $totalDue = $student->payments()->where('status', 'pending')->sum('amount');
-
-        return view('student.payments', [
-            'payments' => $payments,
-            'totalDue' => $totalDue,
-        ]);
+        $student->delete();
+        return redirect()->route('students.index')
+            ->with('success', 'Student deleted successfully!');
     }
 }
