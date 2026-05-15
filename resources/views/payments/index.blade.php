@@ -19,7 +19,7 @@
             <div class="card-body">
                 <i class="fas fa-clock fa-3x float-end"></i>
                 <h5>Pending Amount</h5>
-                <h2>₦{{ number_format($pendingAmount, 2) }}</h2>
+                <h2>{{ number_format($pendingAmount, 2) }}</h2>
             </div>
         </div>
     </div>
